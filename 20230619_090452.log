@@ -1,0 +1,1005 @@
+2023/06/19 09:04:56 - mmengine - INFO - 
+------------------------------------------------------------
+System environment:
+    sys.platform: win32
+    Python: 3.8.12 (default, Oct 12 2021, 03:01:40) [MSC v.1916 64 bit (AMD64)]
+    CUDA available: True
+    numpy_random_seed: 552213196
+    GPU 0: NVIDIA GeForce RTX 2080 Ti
+    CUDA_HOME: C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v11.1
+    NVCC: Cuda compilation tools, release 11.1, V11.1.74
+    MSVC: 用于 x64 的 Microsoft (R) C/C++ 优化编译器 19.29.30143 版
+    GCC: n/a
+    PyTorch: 1.10.1+cu113
+    PyTorch compiling details: PyTorch built with:
+  - C++ Version: 199711
+  - MSVC 192829337
+  - Intel(R) Math Kernel Library Version 2020.0.2 Product Build 20200624 for Intel(R) 64 architecture applications
+  - Intel(R) MKL-DNN v2.2.3 (Git Hash 7336ca9f055cf1bfa13efb658fe15dc9b41f0740)
+  - OpenMP 2019
+  - LAPACK is enabled (usually provided by MKL)
+  - CPU capability usage: AVX2
+  - CUDA Runtime 11.3
+  - NVCC architecture flags: -gencode;arch=compute_37,code=sm_37;-gencode;arch=compute_50,code=sm_50;-gencode;arch=compute_60,code=sm_60;-gencode;arch=compute_61,code=sm_61;-gencode;arch=compute_70,code=sm_70;-gencode;arch=compute_75,code=sm_75;-gencode;arch=compute_80,code=sm_80;-gencode;arch=compute_86,code=sm_86;-gencode;arch=compute_37,code=compute_37
+  - CuDNN 8.2
+  - Magma 2.5.4
+  - Build settings: BLAS_INFO=mkl, BUILD_TYPE=Release, CUDA_VERSION=11.3, CUDNN_VERSION=8.2.0, CXX_COMPILER=C:/w/b/windows/tmp_bin/sccache-cl.exe, CXX_FLAGS=/DWIN32 /D_WINDOWS /GR /EHsc /w /bigobj -DUSE_PTHREADPOOL -openmp:experimental -IC:/w/b/windows/mkl/include -DNDEBUG -DUSE_KINETO -DLIBKINETO_NOCUPTI -DUSE_FBGEMM -DUSE_XNNPACK -DSYMBOLICATE_MOBILE_DEBUG_HANDLE -DEDGE_PROFILER_USE_KINETO, LAPACK_INFO=mkl, PERF_WITH_AVX=1, PERF_WITH_AVX2=1, PERF_WITH_AVX512=1, TORCH_VERSION=1.10.1, USE_CUDA=ON, USE_CUDNN=ON, USE_EXCEPTION_PTR=1, USE_GFLAGS=OFF, USE_GLOG=OFF, USE_MKL=ON, USE_MKLDNN=ON, USE_MPI=OFF, USE_NCCL=OFF, USE_NNPACK=OFF, USE_OPENMP=ON, 
+
+    TorchVision: 0.11.2+cu113
+    OpenCV: 4.7.0
+    MMEngine: 0.7.1
+
+Runtime environment:
+    cudnn_benchmark: True
+    mp_cfg: {'mp_start_method': 'fork', 'opencv_num_threads': 0}
+    dist_cfg: {'backend': 'nccl'}
+    seed: None
+    Distributed launcher: none
+    Distributed training: False
+    GPU number: 1
+------------------------------------------------------------
+
+2023/06/19 09:04:56 - mmengine - INFO - Config:
+norm_cfg = dict(type='BN', requires_grad=True)
+data_preprocessor = dict(
+    type='SegDataPreProcessor',
+    mean=[123.675, 116.28, 103.53],
+    std=[58.395, 57.12, 57.375],
+    bgr_to_rgb=True,
+    pad_val=0,
+    seg_pad_val=255,
+    size=(769, 769))
+model = dict(
+    type='EncoderDecoder',
+    data_preprocessor=dict(
+        type='SegDataPreProcessor',
+        mean=[123.675, 116.28, 103.53],
+        std=[58.395, 57.12, 57.375],
+        bgr_to_rgb=True,
+        pad_val=0,
+        seg_pad_val=255,
+        size=(769, 769)),
+    pretrained='torchvision://resnet50',
+    backbone=dict(
+        type='ResNet',
+        depth=50,
+        num_stages=4,
+        out_indices=(0, 1, 2, 3),
+        dilations=(1, 1, 2, 4),
+        strides=(1, 2, 1, 1),
+        norm_cfg=dict(type='BN', requires_grad=True),
+        norm_eval=False,
+        style='pytorch',
+        contract_dilation=True),
+    decode_head=dict(
+        type='PSPHead',
+        in_channels=2048,
+        in_index=3,
+        channels=512,
+        pool_scales=(1, 2, 3, 6),
+        dropout_ratio=0.1,
+        num_classes=6,
+        norm_cfg=dict(type='BN', requires_grad=True),
+        align_corners=True,
+        loss_decode=dict(
+            type='CrossEntropyLoss',
+            use_sigmoid=False,
+            loss_name='loss_ce',
+            loss_weight=1.0)),
+    auxiliary_head=dict(
+        type='FCNHead',
+        in_channels=1024,
+        in_index=2,
+        channels=256,
+        num_convs=1,
+        concat_input=False,
+        dropout_ratio=0.1,
+        num_classes=6,
+        norm_cfg=dict(type='BN', requires_grad=True),
+        align_corners=True,
+        loss_decode=dict(
+            type='CrossEntropyLoss', use_sigmoid=False, loss_weight=0.4)),
+    train_cfg=dict(),
+    test_cfg=dict(mode='slide', crop_size=(769, 769), stride=(513, 513)))
+dataset_type = 'WatermelonDataset'
+data_root = 'data/Watermelon87_Semantic_Seg_Mask/'
+crop_size = (769, 769)
+train_pipeline = [
+    dict(type='LoadImageFromFile'),
+    dict(type='LoadAnnotations'),
+    dict(
+        type='RandomResize',
+        scale=(2049, 1025),
+        ratio_range=(0.5, 2.0),
+        keep_ratio=True),
+    dict(type='RandomCrop', crop_size=(769, 769), cat_max_ratio=0.75),
+    dict(type='RandomFlip', prob=0.5),
+    dict(type='PhotoMetricDistortion'),
+    dict(type='PackSegInputs')
+]
+test_pipeline = [
+    dict(type='LoadImageFromFile'),
+    dict(type='Resize', scale=(2049, 1025), keep_ratio=True),
+    dict(type='LoadAnnotations'),
+    dict(type='PackSegInputs')
+]
+img_ratios = [0.5, 0.75, 1.0, 1.25, 1.5, 1.75]
+tta_pipeline = [
+    dict(type='LoadImageFromFile', backend_args=None),
+    dict(
+        type='TestTimeAug',
+        transforms=[[{
+            'type': 'Resize',
+            'scale_factor': 0.5,
+            'keep_ratio': True
+        }, {
+            'type': 'Resize',
+            'scale_factor': 0.75,
+            'keep_ratio': True
+        }, {
+            'type': 'Resize',
+            'scale_factor': 1.0,
+            'keep_ratio': True
+        }, {
+            'type': 'Resize',
+            'scale_factor': 1.25,
+            'keep_ratio': True
+        }, {
+            'type': 'Resize',
+            'scale_factor': 1.5,
+            'keep_ratio': True
+        }, {
+            'type': 'Resize',
+            'scale_factor': 1.75,
+            'keep_ratio': True
+        }],
+                    [{
+                        'type': 'RandomFlip',
+                        'prob': 0.0,
+                        'direction': 'horizontal'
+                    }, {
+                        'type': 'RandomFlip',
+                        'prob': 1.0,
+                        'direction': 'horizontal'
+                    }], [{
+                        'type': 'LoadAnnotations'
+                    }], [{
+                        'type': 'PackSegInputs'
+                    }]])
+]
+train_dataloader = dict(
+    batch_size=2,
+    num_workers=2,
+    persistent_workers=True,
+    sampler=dict(type='InfiniteSampler', shuffle=True),
+    dataset=dict(
+        type='WatermelonDataset',
+        data_root='data/Watermelon87_Semantic_Seg_Mask/',
+        data_prefix=dict(
+            img_path='img_dir/train', seg_map_path='ann_dir/train'),
+        pipeline=[
+            dict(type='LoadImageFromFile'),
+            dict(type='LoadAnnotations'),
+            dict(
+                type='RandomResize',
+                scale=(2049, 1025),
+                ratio_range=(0.5, 2.0),
+                keep_ratio=True),
+            dict(type='RandomCrop', crop_size=(769, 769), cat_max_ratio=0.75),
+            dict(type='RandomFlip', prob=0.5),
+            dict(type='PhotoMetricDistortion'),
+            dict(type='PackSegInputs')
+        ]))
+val_dataloader = dict(
+    batch_size=1,
+    num_workers=4,
+    persistent_workers=True,
+    sampler=dict(type='DefaultSampler', shuffle=False),
+    dataset=dict(
+        type='WatermelonDataset',
+        data_root='data/Watermelon87_Semantic_Seg_Mask/',
+        data_prefix=dict(img_path='img_dir/val', seg_map_path='ann_dir/val'),
+        pipeline=[
+            dict(type='LoadImageFromFile'),
+            dict(type='Resize', scale=(2049, 1025), keep_ratio=True),
+            dict(type='LoadAnnotations'),
+            dict(type='PackSegInputs')
+        ]))
+test_dataloader = dict(
+    batch_size=1,
+    num_workers=4,
+    persistent_workers=True,
+    sampler=dict(type='DefaultSampler', shuffle=False),
+    dataset=dict(
+        type='WatermelonDataset',
+        data_root='data/Watermelon87_Semantic_Seg_Mask/',
+        data_prefix=dict(img_path='img_dir/val', seg_map_path='ann_dir/val'),
+        pipeline=[
+            dict(type='LoadImageFromFile'),
+            dict(type='Resize', scale=(2049, 1025), keep_ratio=True),
+            dict(type='LoadAnnotations'),
+            dict(type='PackSegInputs')
+        ]))
+val_evaluator = dict(type='IoUMetric', iou_metrics=['mIoU'])
+test_evaluator = dict(type='IoUMetric', iou_metrics=['mIoU'])
+default_scope = 'mmseg'
+env_cfg = dict(
+    cudnn_benchmark=True,
+    mp_cfg=dict(mp_start_method='fork', opencv_num_threads=0),
+    dist_cfg=dict(backend='nccl'))
+vis_backends = [dict(type='LocalVisBackend')]
+visualizer = dict(
+    type='SegLocalVisualizer',
+    vis_backends=[dict(type='LocalVisBackend')],
+    name='visualizer')
+log_processor = dict(by_epoch=False)
+log_level = 'INFO'
+load_from = None
+resume = False
+tta_model = dict(type='SegTTAModel')
+optimizer = dict(type='SGD', lr=0.01, momentum=0.9, weight_decay=0.0005)
+optim_wrapper = dict(
+    type='OptimWrapper',
+    optimizer=dict(type='SGD', lr=0.01, momentum=0.9, weight_decay=0.0005),
+    clip_grad=None)
+param_scheduler = [
+    dict(
+        type='PolyLR',
+        eta_min=0.0001,
+        power=0.9,
+        begin=0,
+        end=80000,
+        by_epoch=False)
+]
+train_cfg = dict(type='IterBasedTrainLoop', max_iters=40000, val_interval=2000)
+val_cfg = dict(type='ValLoop')
+test_cfg = dict(type='TestLoop')
+default_hooks = dict(
+    timer=dict(type='IterTimerHook'),
+    logger=dict(type='LoggerHook', interval=50, log_metric_by_epoch=False),
+    param_scheduler=dict(type='ParamSchedulerHook'),
+    checkpoint=dict(type='CheckpointHook', by_epoch=False, interval=2000),
+    sampler_seed=dict(type='DistSamplerSeedHook'),
+    visualization=dict(type='SegVisualizationHook'))
+launcher = 'none'
+work_dir = './work_dirs\\pspnet_r50b-d8_4xb2-80k_cityscapes-769x769'
+
+2023/06/19 09:05:00 - mmengine - INFO - Distributed training is not used, all SyncBatchNorm (SyncBN) layers in the model will be automatically reverted to BatchNormXd layers if they are used.
+2023/06/19 09:05:00 - mmengine - INFO - Hooks will be executed in the following order:
+before_run:
+(VERY_HIGH   ) RuntimeInfoHook                    
+(BELOW_NORMAL) LoggerHook                         
+ -------------------- 
+before_train:
+(VERY_HIGH   ) RuntimeInfoHook                    
+(NORMAL      ) IterTimerHook                      
+(VERY_LOW    ) CheckpointHook                     
+ -------------------- 
+before_train_epoch:
+(VERY_HIGH   ) RuntimeInfoHook                    
+(NORMAL      ) IterTimerHook                      
+(NORMAL      ) DistSamplerSeedHook                
+ -------------------- 
+before_train_iter:
+(VERY_HIGH   ) RuntimeInfoHook                    
+(NORMAL      ) IterTimerHook                      
+ -------------------- 
+after_train_iter:
+(VERY_HIGH   ) RuntimeInfoHook                    
+(NORMAL      ) IterTimerHook                      
+(NORMAL      ) SegVisualizationHook               
+(BELOW_NORMAL) LoggerHook                         
+(LOW         ) ParamSchedulerHook                 
+(VERY_LOW    ) CheckpointHook                     
+ -------------------- 
+after_train_epoch:
+(NORMAL      ) IterTimerHook                      
+(LOW         ) ParamSchedulerHook                 
+(VERY_LOW    ) CheckpointHook                     
+ -------------------- 
+before_val_epoch:
+(NORMAL      ) IterTimerHook                      
+ -------------------- 
+before_val_iter:
+(NORMAL      ) IterTimerHook                      
+ -------------------- 
+after_val_iter:
+(NORMAL      ) IterTimerHook                      
+(NORMAL      ) SegVisualizationHook               
+(BELOW_NORMAL) LoggerHook                         
+ -------------------- 
+after_val_epoch:
+(VERY_HIGH   ) RuntimeInfoHook                    
+(NORMAL      ) IterTimerHook                      
+(BELOW_NORMAL) LoggerHook                         
+(LOW         ) ParamSchedulerHook                 
+(VERY_LOW    ) CheckpointHook                     
+ -------------------- 
+after_train:
+(VERY_LOW    ) CheckpointHook                     
+ -------------------- 
+before_test_epoch:
+(NORMAL      ) IterTimerHook                      
+ -------------------- 
+before_test_iter:
+(NORMAL      ) IterTimerHook                      
+ -------------------- 
+after_test_iter:
+(NORMAL      ) IterTimerHook                      
+(NORMAL      ) SegVisualizationHook               
+(BELOW_NORMAL) LoggerHook                         
+ -------------------- 
+after_test_epoch:
+(VERY_HIGH   ) RuntimeInfoHook                    
+(NORMAL      ) IterTimerHook                      
+(BELOW_NORMAL) LoggerHook                         
+ -------------------- 
+after_run:
+(BELOW_NORMAL) LoggerHook                         
+ -------------------- 
+2023/06/19 09:05:03 - mmengine - WARNING - The prefix is not set in metric class IoUMetric.
+2023/06/19 09:05:05 - mmengine - INFO - load model from: torchvision://resnet50
+2023/06/19 09:05:05 - mmengine - INFO - Loads checkpoint by torchvision backend from path: torchvision://resnet50
+2023/06/19 09:05:05 - mmengine - WARNING - The model and loaded state dict do not match exactly
+
+unexpected key in source state_dict: fc.weight, fc.bias
+
+Name of parameter - Initialization information
+
+backbone.conv1.weight - torch.Size([64, 3, 7, 7]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.bn1.weight - torch.Size([64]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.bn1.bias - torch.Size([64]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer1.0.conv1.weight - torch.Size([64, 64, 1, 1]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer1.0.bn1.weight - torch.Size([64]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer1.0.bn1.bias - torch.Size([64]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer1.0.conv2.weight - torch.Size([64, 64, 3, 3]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer1.0.bn2.weight - torch.Size([64]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer1.0.bn2.bias - torch.Size([64]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer1.0.conv3.weight - torch.Size([256, 64, 1, 1]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer1.0.bn3.weight - torch.Size([256]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer1.0.bn3.bias - torch.Size([256]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer1.0.downsample.0.weight - torch.Size([256, 64, 1, 1]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer1.0.downsample.1.weight - torch.Size([256]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer1.0.downsample.1.bias - torch.Size([256]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer1.1.conv1.weight - torch.Size([64, 256, 1, 1]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer1.1.bn1.weight - torch.Size([64]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer1.1.bn1.bias - torch.Size([64]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer1.1.conv2.weight - torch.Size([64, 64, 3, 3]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer1.1.bn2.weight - torch.Size([64]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer1.1.bn2.bias - torch.Size([64]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer1.1.conv3.weight - torch.Size([256, 64, 1, 1]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer1.1.bn3.weight - torch.Size([256]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer1.1.bn3.bias - torch.Size([256]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer1.2.conv1.weight - torch.Size([64, 256, 1, 1]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer1.2.bn1.weight - torch.Size([64]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer1.2.bn1.bias - torch.Size([64]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer1.2.conv2.weight - torch.Size([64, 64, 3, 3]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer1.2.bn2.weight - torch.Size([64]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer1.2.bn2.bias - torch.Size([64]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer1.2.conv3.weight - torch.Size([256, 64, 1, 1]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer1.2.bn3.weight - torch.Size([256]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer1.2.bn3.bias - torch.Size([256]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer2.0.conv1.weight - torch.Size([128, 256, 1, 1]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer2.0.bn1.weight - torch.Size([128]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer2.0.bn1.bias - torch.Size([128]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer2.0.conv2.weight - torch.Size([128, 128, 3, 3]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer2.0.bn2.weight - torch.Size([128]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer2.0.bn2.bias - torch.Size([128]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer2.0.conv3.weight - torch.Size([512, 128, 1, 1]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer2.0.bn3.weight - torch.Size([512]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer2.0.bn3.bias - torch.Size([512]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer2.0.downsample.0.weight - torch.Size([512, 256, 1, 1]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer2.0.downsample.1.weight - torch.Size([512]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer2.0.downsample.1.bias - torch.Size([512]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer2.1.conv1.weight - torch.Size([128, 512, 1, 1]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer2.1.bn1.weight - torch.Size([128]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer2.1.bn1.bias - torch.Size([128]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer2.1.conv2.weight - torch.Size([128, 128, 3, 3]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer2.1.bn2.weight - torch.Size([128]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer2.1.bn2.bias - torch.Size([128]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer2.1.conv3.weight - torch.Size([512, 128, 1, 1]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer2.1.bn3.weight - torch.Size([512]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer2.1.bn3.bias - torch.Size([512]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer2.2.conv1.weight - torch.Size([128, 512, 1, 1]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer2.2.bn1.weight - torch.Size([128]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer2.2.bn1.bias - torch.Size([128]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer2.2.conv2.weight - torch.Size([128, 128, 3, 3]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer2.2.bn2.weight - torch.Size([128]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer2.2.bn2.bias - torch.Size([128]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer2.2.conv3.weight - torch.Size([512, 128, 1, 1]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer2.2.bn3.weight - torch.Size([512]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer2.2.bn3.bias - torch.Size([512]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer2.3.conv1.weight - torch.Size([128, 512, 1, 1]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer2.3.bn1.weight - torch.Size([128]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer2.3.bn1.bias - torch.Size([128]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer2.3.conv2.weight - torch.Size([128, 128, 3, 3]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer2.3.bn2.weight - torch.Size([128]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer2.3.bn2.bias - torch.Size([128]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer2.3.conv3.weight - torch.Size([512, 128, 1, 1]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer2.3.bn3.weight - torch.Size([512]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer2.3.bn3.bias - torch.Size([512]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer3.0.conv1.weight - torch.Size([256, 512, 1, 1]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer3.0.bn1.weight - torch.Size([256]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer3.0.bn1.bias - torch.Size([256]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer3.0.conv2.weight - torch.Size([256, 256, 3, 3]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer3.0.bn2.weight - torch.Size([256]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer3.0.bn2.bias - torch.Size([256]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer3.0.conv3.weight - torch.Size([1024, 256, 1, 1]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer3.0.bn3.weight - torch.Size([1024]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer3.0.bn3.bias - torch.Size([1024]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer3.0.downsample.0.weight - torch.Size([1024, 512, 1, 1]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer3.0.downsample.1.weight - torch.Size([1024]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer3.0.downsample.1.bias - torch.Size([1024]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer3.1.conv1.weight - torch.Size([256, 1024, 1, 1]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer3.1.bn1.weight - torch.Size([256]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer3.1.bn1.bias - torch.Size([256]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer3.1.conv2.weight - torch.Size([256, 256, 3, 3]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer3.1.bn2.weight - torch.Size([256]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer3.1.bn2.bias - torch.Size([256]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer3.1.conv3.weight - torch.Size([1024, 256, 1, 1]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer3.1.bn3.weight - torch.Size([1024]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer3.1.bn3.bias - torch.Size([1024]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer3.2.conv1.weight - torch.Size([256, 1024, 1, 1]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer3.2.bn1.weight - torch.Size([256]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer3.2.bn1.bias - torch.Size([256]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer3.2.conv2.weight - torch.Size([256, 256, 3, 3]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer3.2.bn2.weight - torch.Size([256]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer3.2.bn2.bias - torch.Size([256]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer3.2.conv3.weight - torch.Size([1024, 256, 1, 1]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer3.2.bn3.weight - torch.Size([1024]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer3.2.bn3.bias - torch.Size([1024]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer3.3.conv1.weight - torch.Size([256, 1024, 1, 1]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer3.3.bn1.weight - torch.Size([256]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer3.3.bn1.bias - torch.Size([256]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer3.3.conv2.weight - torch.Size([256, 256, 3, 3]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer3.3.bn2.weight - torch.Size([256]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer3.3.bn2.bias - torch.Size([256]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer3.3.conv3.weight - torch.Size([1024, 256, 1, 1]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer3.3.bn3.weight - torch.Size([1024]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer3.3.bn3.bias - torch.Size([1024]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer3.4.conv1.weight - torch.Size([256, 1024, 1, 1]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer3.4.bn1.weight - torch.Size([256]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer3.4.bn1.bias - torch.Size([256]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer3.4.conv2.weight - torch.Size([256, 256, 3, 3]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer3.4.bn2.weight - torch.Size([256]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer3.4.bn2.bias - torch.Size([256]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer3.4.conv3.weight - torch.Size([1024, 256, 1, 1]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer3.4.bn3.weight - torch.Size([1024]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer3.4.bn3.bias - torch.Size([1024]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer3.5.conv1.weight - torch.Size([256, 1024, 1, 1]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer3.5.bn1.weight - torch.Size([256]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer3.5.bn1.bias - torch.Size([256]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer3.5.conv2.weight - torch.Size([256, 256, 3, 3]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer3.5.bn2.weight - torch.Size([256]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer3.5.bn2.bias - torch.Size([256]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer3.5.conv3.weight - torch.Size([1024, 256, 1, 1]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer3.5.bn3.weight - torch.Size([1024]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer3.5.bn3.bias - torch.Size([1024]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer4.0.conv1.weight - torch.Size([512, 1024, 1, 1]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer4.0.bn1.weight - torch.Size([512]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer4.0.bn1.bias - torch.Size([512]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer4.0.conv2.weight - torch.Size([512, 512, 3, 3]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer4.0.bn2.weight - torch.Size([512]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer4.0.bn2.bias - torch.Size([512]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer4.0.conv3.weight - torch.Size([2048, 512, 1, 1]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer4.0.bn3.weight - torch.Size([2048]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer4.0.bn3.bias - torch.Size([2048]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer4.0.downsample.0.weight - torch.Size([2048, 1024, 1, 1]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer4.0.downsample.1.weight - torch.Size([2048]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer4.0.downsample.1.bias - torch.Size([2048]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer4.1.conv1.weight - torch.Size([512, 2048, 1, 1]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer4.1.bn1.weight - torch.Size([512]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer4.1.bn1.bias - torch.Size([512]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer4.1.conv2.weight - torch.Size([512, 512, 3, 3]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer4.1.bn2.weight - torch.Size([512]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer4.1.bn2.bias - torch.Size([512]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer4.1.conv3.weight - torch.Size([2048, 512, 1, 1]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer4.1.bn3.weight - torch.Size([2048]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer4.1.bn3.bias - torch.Size([2048]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer4.2.conv1.weight - torch.Size([512, 2048, 1, 1]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer4.2.bn1.weight - torch.Size([512]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer4.2.bn1.bias - torch.Size([512]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer4.2.conv2.weight - torch.Size([512, 512, 3, 3]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer4.2.bn2.weight - torch.Size([512]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer4.2.bn2.bias - torch.Size([512]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer4.2.conv3.weight - torch.Size([2048, 512, 1, 1]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer4.2.bn3.weight - torch.Size([2048]): 
+PretrainedInit: load from torchvision://resnet50 
+
+backbone.layer4.2.bn3.bias - torch.Size([2048]): 
+PretrainedInit: load from torchvision://resnet50 
+
+decode_head.conv_seg.weight - torch.Size([6, 512, 1, 1]): 
+NormalInit: mean=0, std=0.01, bias=0 
+
+decode_head.conv_seg.bias - torch.Size([6]): 
+NormalInit: mean=0, std=0.01, bias=0 
+
+decode_head.psp_modules.0.1.conv.weight - torch.Size([512, 2048, 1, 1]): 
+The value is the same before and after calling `init_weights` of EncoderDecoder  
+
+decode_head.psp_modules.0.1.bn.weight - torch.Size([512]): 
+The value is the same before and after calling `init_weights` of EncoderDecoder  
+
+decode_head.psp_modules.0.1.bn.bias - torch.Size([512]): 
+The value is the same before and after calling `init_weights` of EncoderDecoder  
+
+decode_head.psp_modules.1.1.conv.weight - torch.Size([512, 2048, 1, 1]): 
+The value is the same before and after calling `init_weights` of EncoderDecoder  
+
+decode_head.psp_modules.1.1.bn.weight - torch.Size([512]): 
+The value is the same before and after calling `init_weights` of EncoderDecoder  
+
+decode_head.psp_modules.1.1.bn.bias - torch.Size([512]): 
+The value is the same before and after calling `init_weights` of EncoderDecoder  
+
+decode_head.psp_modules.2.1.conv.weight - torch.Size([512, 2048, 1, 1]): 
+The value is the same before and after calling `init_weights` of EncoderDecoder  
+
+decode_head.psp_modules.2.1.bn.weight - torch.Size([512]): 
+The value is the same before and after calling `init_weights` of EncoderDecoder  
+
+decode_head.psp_modules.2.1.bn.bias - torch.Size([512]): 
+The value is the same before and after calling `init_weights` of EncoderDecoder  
+
+decode_head.psp_modules.3.1.conv.weight - torch.Size([512, 2048, 1, 1]): 
+The value is the same before and after calling `init_weights` of EncoderDecoder  
+
+decode_head.psp_modules.3.1.bn.weight - torch.Size([512]): 
+The value is the same before and after calling `init_weights` of EncoderDecoder  
+
+decode_head.psp_modules.3.1.bn.bias - torch.Size([512]): 
+The value is the same before and after calling `init_weights` of EncoderDecoder  
+
+decode_head.bottleneck.conv.weight - torch.Size([512, 4096, 3, 3]): 
+Initialized by user-defined `init_weights` in ConvModule  
+
+decode_head.bottleneck.bn.weight - torch.Size([512]): 
+The value is the same before and after calling `init_weights` of EncoderDecoder  
+
+decode_head.bottleneck.bn.bias - torch.Size([512]): 
+The value is the same before and after calling `init_weights` of EncoderDecoder  
+
+auxiliary_head.conv_seg.weight - torch.Size([6, 256, 1, 1]): 
+NormalInit: mean=0, std=0.01, bias=0 
+
+auxiliary_head.conv_seg.bias - torch.Size([6]): 
+NormalInit: mean=0, std=0.01, bias=0 
+
+auxiliary_head.convs.0.conv.weight - torch.Size([256, 1024, 3, 3]): 
+The value is the same before and after calling `init_weights` of EncoderDecoder  
+
+auxiliary_head.convs.0.bn.weight - torch.Size([256]): 
+The value is the same before and after calling `init_weights` of EncoderDecoder  
+
+auxiliary_head.convs.0.bn.bias - torch.Size([256]): 
+The value is the same before and after calling `init_weights` of EncoderDecoder  
+2023/06/19 09:05:05 - mmengine - WARNING - "FileClient" will be deprecated in future. Please use io functions in https://mmengine.readthedocs.io/en/latest/api/fileio.html#file-io
+2023/06/19 09:05:05 - mmengine - WARNING - "HardDiskBackend" is the alias of "LocalBackend" and the former will be deprecated in future.
+2023/06/19 09:05:05 - mmengine - INFO - Checkpoints will be saved to D:\DeepNetwork\mmsegmentation-dev-1.x\work_dirs\pspnet_r50b-d8_4xb2-80k_cityscapes-769x769.
+2023/06/19 09:05:31 - mmengine - INFO - Exp name: pspnet_r50b-d8_4xb2-80k_cityscapes-769x769_20230619_090452
+2023/06/19 09:05:41 - mmengine - INFO - Iter(train) [   50/40000]  lr: 9.9945e-03  eta: 8:01:08  time: 0.6452  data_time: 0.0024  memory: 6894  loss: 1.0033  decode.loss_ce: 0.7123  decode.acc_seg: 86.4466  aux.loss_ce: 0.2910  aux.acc_seg: 88.0046
+2023/06/19 09:06:14 - mmengine - INFO - Iter(train) [  100/40000]  lr: 9.9890e-03  eta: 7:37:19  time: 0.6495  data_time: 0.0024  memory: 6770  loss: 0.9724  decode.loss_ce: 0.6984  decode.acc_seg: 72.1039  aux.loss_ce: 0.2739  aux.acc_seg: 83.6175
+2023/06/19 09:06:47 - mmengine - INFO - Iter(train) [  150/40000]  lr: 9.9834e-03  eta: 7:30:34  time: 0.6581  data_time: 0.0027  memory: 6770  loss: 0.6723  decode.loss_ce: 0.4749  decode.acc_seg: 89.4723  aux.loss_ce: 0.1973  aux.acc_seg: 87.6606
+2023/06/19 09:07:19 - mmengine - INFO - Iter(train) [  200/40000]  lr: 9.9778e-03  eta: 7:25:49  time: 0.6483  data_time: 0.0020  memory: 6771  loss: 0.6060  decode.loss_ce: 0.4375  decode.acc_seg: 74.3143  aux.loss_ce: 0.1685  aux.acc_seg: 77.2096
+2023/06/19 09:07:52 - mmengine - INFO - Iter(train) [  250/40000]  lr: 9.9723e-03  eta: 7:22:38  time: 0.6522  data_time: 0.0024  memory: 6770  loss: 0.5661  decode.loss_ce: 0.4014  decode.acc_seg: 92.8866  aux.loss_ce: 0.1646  aux.acc_seg: 95.7626
+2023/06/19 09:08:24 - mmengine - INFO - Iter(train) [  300/40000]  lr: 9.9667e-03  eta: 7:20:29  time: 0.6535  data_time: 0.0022  memory: 6771  loss: 0.6360  decode.loss_ce: 0.4477  decode.acc_seg: 72.5158  aux.loss_ce: 0.1883  aux.acc_seg: 67.5123
+2023/06/19 09:08:57 - mmengine - INFO - Iter(train) [  350/40000]  lr: 9.9611e-03  eta: 7:18:39  time: 0.6497  data_time: 0.0023  memory: 6770  loss: 0.4082  decode.loss_ce: 0.2802  decode.acc_seg: 85.9006  aux.loss_ce: 0.1279  aux.acc_seg: 84.1352
+2023/06/19 09:09:30 - mmengine - INFO - Iter(train) [  400/40000]  lr: 9.9555e-03  eta: 7:17:02  time: 0.6501  data_time: 0.0026  memory: 6770  loss: 0.4868  decode.loss_ce: 0.3279  decode.acc_seg: 90.2076  aux.loss_ce: 0.1589  aux.acc_seg: 93.2463
+2023/06/19 09:10:02 - mmengine - INFO - Iter(train) [  450/40000]  lr: 9.9500e-03  eta: 7:15:50  time: 0.6558  data_time: 0.0024  memory: 6770  loss: 0.3129  decode.loss_ce: 0.2237  decode.acc_seg: 95.7676  aux.loss_ce: 0.0892  aux.acc_seg: 95.7165
+2023/06/19 09:10:35 - mmengine - INFO - Iter(train) [  500/40000]  lr: 9.9444e-03  eta: 7:14:41  time: 0.6547  data_time: 0.0024  memory: 6771  loss: 0.4824  decode.loss_ce: 0.3457  decode.acc_seg: 96.5019  aux.loss_ce: 0.1367  aux.acc_seg: 95.5805
+2023/06/19 09:11:08 - mmengine - INFO - Iter(train) [  550/40000]  lr: 9.9388e-03  eta: 7:13:49  time: 0.6524  data_time: 0.0025  memory: 6771  loss: 0.4030  decode.loss_ce: 0.2805  decode.acc_seg: 89.4575  aux.loss_ce: 0.1225  aux.acc_seg: 80.7789
+2023/06/19 09:11:40 - mmengine - INFO - Iter(train) [  600/40000]  lr: 9.9333e-03  eta: 7:13:00  time: 0.6550  data_time: 0.0025  memory: 6770  loss: 0.4308  decode.loss_ce: 0.3007  decode.acc_seg: 93.1322  aux.loss_ce: 0.1300  aux.acc_seg: 95.0587
+2023/06/19 09:12:13 - mmengine - INFO - Iter(train) [  650/40000]  lr: 9.9277e-03  eta: 7:12:24  time: 0.6552  data_time: 0.0020  memory: 6770  loss: 0.5026  decode.loss_ce: 0.3510  decode.acc_seg: 73.3655  aux.loss_ce: 0.1516  aux.acc_seg: 54.6280
+2023/06/19 09:12:46 - mmengine - INFO - Iter(train) [  700/40000]  lr: 9.9221e-03  eta: 7:11:38  time: 0.6530  data_time: 0.0023  memory: 6770  loss: 0.3600  decode.loss_ce: 0.2510  decode.acc_seg: 84.1642  aux.loss_ce: 0.1090  aux.acc_seg: 84.9440
+2023/06/19 09:13:19 - mmengine - INFO - Iter(train) [  750/40000]  lr: 9.9165e-03  eta: 7:10:48  time: 0.6560  data_time: 0.0021  memory: 6770  loss: 0.3624  decode.loss_ce: 0.2494  decode.acc_seg: 96.8644  aux.loss_ce: 0.1130  aux.acc_seg: 95.4840
+2023/06/19 09:13:51 - mmengine - INFO - Iter(train) [  800/40000]  lr: 9.9110e-03  eta: 7:10:04  time: 0.6543  data_time: 0.0025  memory: 6771  loss: 0.4526  decode.loss_ce: 0.3232  decode.acc_seg: 90.0007  aux.loss_ce: 0.1293  aux.acc_seg: 89.1377
+2023/06/19 09:14:24 - mmengine - INFO - Iter(train) [  850/40000]  lr: 9.9054e-03  eta: 7:09:25  time: 0.6587  data_time: 0.0023  memory: 6771  loss: 0.2702  decode.loss_ce: 0.1876  decode.acc_seg: 82.5069  aux.loss_ce: 0.0826  aux.acc_seg: 88.3160
+2023/06/19 09:14:57 - mmengine - INFO - Iter(train) [  900/40000]  lr: 9.8998e-03  eta: 7:08:45  time: 0.6524  data_time: 0.0025  memory: 6771  loss: 0.3635  decode.loss_ce: 0.2522  decode.acc_seg: 84.9189  aux.loss_ce: 0.1113  aux.acc_seg: 86.4722
+2023/06/19 09:15:30 - mmengine - INFO - Iter(train) [  950/40000]  lr: 9.8942e-03  eta: 7:08:06  time: 0.6560  data_time: 0.0024  memory: 6771  loss: 0.6169  decode.loss_ce: 0.4337  decode.acc_seg: 66.6545  aux.loss_ce: 0.1832  aux.acc_seg: 70.1451
+2023/06/19 09:16:02 - mmengine - INFO - Exp name: pspnet_r50b-d8_4xb2-80k_cityscapes-769x769_20230619_090452
+2023/06/19 09:16:02 - mmengine - INFO - Iter(train) [ 1000/40000]  lr: 9.8887e-03  eta: 7:07:27  time: 0.6553  data_time: 0.0024  memory: 6771  loss: 0.3279  decode.loss_ce: 0.2210  decode.acc_seg: 87.3533  aux.loss_ce: 0.1069  aux.acc_seg: 83.2968
+2023/06/19 09:16:35 - mmengine - INFO - Iter(train) [ 1050/40000]  lr: 9.8831e-03  eta: 7:06:53  time: 0.6636  data_time: 0.0024  memory: 6770  loss: 0.2550  decode.loss_ce: 0.1778  decode.acc_seg: 81.9246  aux.loss_ce: 0.0772  aux.acc_seg: 87.2006
+2023/06/19 09:17:08 - mmengine - INFO - Iter(train) [ 1100/40000]  lr: 9.8775e-03  eta: 7:06:24  time: 0.6613  data_time: 0.0023  memory: 6771  loss: 0.3024  decode.loss_ce: 0.2011  decode.acc_seg: 98.1489  aux.loss_ce: 0.1013  aux.acc_seg: 97.7555
+2023/06/19 09:17:41 - mmengine - INFO - Iter(train) [ 1150/40000]  lr: 9.8719e-03  eta: 7:05:52  time: 0.6504  data_time: 0.0024  memory: 6771  loss: 0.3744  decode.loss_ce: 0.2679  decode.acc_seg: 92.0767  aux.loss_ce: 0.1065  aux.acc_seg: 92.6523
+2023/06/19 09:18:14 - mmengine - INFO - Iter(train) [ 1200/40000]  lr: 9.8664e-03  eta: 7:05:12  time: 0.6534  data_time: 0.0023  memory: 6771  loss: 0.3170  decode.loss_ce: 0.2206  decode.acc_seg: 82.0761  aux.loss_ce: 0.0964  aux.acc_seg: 81.0828
+2023/06/19 09:18:47 - mmengine - INFO - Iter(train) [ 1250/40000]  lr: 9.8608e-03  eta: 7:04:37  time: 0.6564  data_time: 0.0023  memory: 6771  loss: 0.6084  decode.loss_ce: 0.4391  decode.acc_seg: 94.1307  aux.loss_ce: 0.1694  aux.acc_seg: 95.0791
+2023/06/19 09:19:19 - mmengine - INFO - Iter(train) [ 1300/40000]  lr: 9.8552e-03  eta: 7:03:57  time: 0.6507  data_time: 0.0022  memory: 6770  loss: 0.4865  decode.loss_ce: 0.3488  decode.acc_seg: 92.6464  aux.loss_ce: 0.1377  aux.acc_seg: 92.7455
+2023/06/19 09:19:52 - mmengine - INFO - Iter(train) [ 1350/40000]  lr: 9.8496e-03  eta: 7:03:29  time: 0.6668  data_time: 0.0023  memory: 6771  loss: 0.3401  decode.loss_ce: 0.2487  decode.acc_seg: 91.1938  aux.loss_ce: 0.0914  aux.acc_seg: 87.4520
+2023/06/19 09:20:25 - mmengine - INFO - Iter(train) [ 1400/40000]  lr: 9.8440e-03  eta: 7:02:58  time: 0.6551  data_time: 0.0026  memory: 6770  loss: 0.2857  decode.loss_ce: 0.1987  decode.acc_seg: 96.8909  aux.loss_ce: 0.0870  aux.acc_seg: 97.2765
+2023/06/19 09:20:58 - mmengine - INFO - Iter(train) [ 1450/40000]  lr: 9.8385e-03  eta: 7:02:18  time: 0.6510  data_time: 0.0025  memory: 6770  loss: 0.3553  decode.loss_ce: 0.2472  decode.acc_seg: 85.2141  aux.loss_ce: 0.1081  aux.acc_seg: 85.2730
+2023/06/19 09:21:31 - mmengine - INFO - Iter(train) [ 1500/40000]  lr: 9.8329e-03  eta: 7:01:40  time: 0.6555  data_time: 0.0027  memory: 6770  loss: 0.3947  decode.loss_ce: 0.2895  decode.acc_seg: 93.8248  aux.loss_ce: 0.1053  aux.acc_seg: 95.9280
+2023/06/19 09:22:03 - mmengine - INFO - Iter(train) [ 1550/40000]  lr: 9.8273e-03  eta: 7:01:07  time: 0.6583  data_time: 0.0023  memory: 6770  loss: 0.2601  decode.loss_ce: 0.1824  decode.acc_seg: 93.4998  aux.loss_ce: 0.0777  aux.acc_seg: 94.0166
+2023/06/19 09:22:36 - mmengine - INFO - Iter(train) [ 1600/40000]  lr: 9.8217e-03  eta: 7:00:36  time: 0.6549  data_time: 0.0024  memory: 6770  loss: 0.3572  decode.loss_ce: 0.2458  decode.acc_seg: 95.8894  aux.loss_ce: 0.1114  aux.acc_seg: 94.3997
+2023/06/19 09:23:09 - mmengine - INFO - Iter(train) [ 1650/40000]  lr: 9.8161e-03  eta: 7:00:01  time: 0.6544  data_time: 0.0024  memory: 6770  loss: 0.5327  decode.loss_ce: 0.3957  decode.acc_seg: 95.1646  aux.loss_ce: 0.1370  aux.acc_seg: 93.1390
+2023/06/19 09:23:42 - mmengine - INFO - Iter(train) [ 1700/40000]  lr: 9.8106e-03  eta: 6:59:24  time: 0.6534  data_time: 0.0026  memory: 6770  loss: 0.3028  decode.loss_ce: 0.2078  decode.acc_seg: 94.2585  aux.loss_ce: 0.0950  aux.acc_seg: 94.1873
+2023/06/19 09:24:15 - mmengine - INFO - Iter(train) [ 1750/40000]  lr: 9.8050e-03  eta: 6:58:50  time: 0.6550  data_time: 0.0021  memory: 6770  loss: 0.2997  decode.loss_ce: 0.2123  decode.acc_seg: 84.3281  aux.loss_ce: 0.0873  aux.acc_seg: 84.7584
+2023/06/19 09:24:47 - mmengine - INFO - Iter(train) [ 1800/40000]  lr: 9.7994e-03  eta: 6:58:16  time: 0.6564  data_time: 0.0027  memory: 6771  loss: 0.2500  decode.loss_ce: 0.1697  decode.acc_seg: 85.6696  aux.loss_ce: 0.0803  aux.acc_seg: 82.7841
+2023/06/19 09:25:20 - mmengine - INFO - Iter(train) [ 1850/40000]  lr: 9.7938e-03  eta: 6:57:42  time: 0.6523  data_time: 0.0029  memory: 6770  loss: 0.7607  decode.loss_ce: 0.5730  decode.acc_seg: 95.9569  aux.loss_ce: 0.1876  aux.acc_seg: 94.0876
+2023/06/19 09:25:53 - mmengine - INFO - Iter(train) [ 1900/40000]  lr: 9.7882e-03  eta: 6:57:09  time: 0.6529  data_time: 0.0024  memory: 6771  loss: 0.2839  decode.loss_ce: 0.1925  decode.acc_seg: 95.4157  aux.loss_ce: 0.0914  aux.acc_seg: 94.4806
+2023/06/19 09:26:26 - mmengine - INFO - Iter(train) [ 1950/40000]  lr: 9.7827e-03  eta: 6:56:36  time: 0.6547  data_time: 0.0025  memory: 6771  loss: 0.1897  decode.loss_ce: 0.1220  decode.acc_seg: 93.8674  aux.loss_ce: 0.0676  aux.acc_seg: 93.6438
+2023/06/19 09:26:59 - mmengine - INFO - Exp name: pspnet_r50b-d8_4xb2-80k_cityscapes-769x769_20230619_090452
+2023/06/19 09:26:59 - mmengine - INFO - Iter(train) [ 2000/40000]  lr: 9.7771e-03  eta: 6:56:08  time: 0.6629  data_time: 0.0022  memory: 6770  loss: 0.3569  decode.loss_ce: 0.2641  decode.acc_seg: 93.9368  aux.loss_ce: 0.0927  aux.acc_seg: 95.1888
+2023/06/19 09:26:59 - mmengine - INFO - Saving checkpoint at 2000 iterations
+2023/06/19 09:27:12 - mmengine - INFO - per class results:
+2023/06/19 09:27:12 - mmengine - INFO - 
++------------+-------+-------+
+|   Class    |  IoU  |  Acc  |
++------------+-------+-------+
+|    red     | 75.15 | 75.51 |
+|   green    | 85.52 |  99.2 |
+|   white    | 74.52 |  96.6 |
+| seed-black | 41.32 | 80.71 |
+| seed-white | 65.03 | 68.74 |
++------------+-------+-------+
+2023/06/19 09:27:12 - mmengine - INFO - Iter(val) [17/17]  aAcc: 85.3500  mIoU: 68.3100  mAcc: 84.1500  data_time: 0.0011  time: 0.4722
+2023/06/19 09:27:45 - mmengine - INFO - Iter(train) [ 2050/40000]  lr: 9.7715e-03  eta: 6:55:29  time: 0.6488  data_time: 0.0025  memory: 6770  loss: 0.1888  decode.loss_ce: 0.1321  decode.acc_seg: 95.2483  aux.loss_ce: 0.0567  aux.acc_seg: 95.2833
+2023/06/19 09:28:17 - mmengine - INFO - Iter(train) [ 2100/40000]  lr: 9.7659e-03  eta: 6:54:50  time: 0.6501  data_time: 0.0025  memory: 6769  loss: 0.2457  decode.loss_ce: 0.1714  decode.acc_seg: 94.8323  aux.loss_ce: 0.0743  aux.acc_seg: 94.5267
+2023/06/19 09:28:50 - mmengine - INFO - Iter(train) [ 2150/40000]  lr: 9.7603e-03  eta: 6:54:11  time: 0.6497  data_time: 0.0023  memory: 6769  loss: 0.2273  decode.loss_ce: 0.1539  decode.acc_seg: 96.1129  aux.loss_ce: 0.0734  aux.acc_seg: 95.5820
+2023/06/19 09:29:22 - mmengine - INFO - Iter(train) [ 2200/40000]  lr: 9.7547e-03  eta: 6:53:34  time: 0.6513  data_time: 0.0024  memory: 6769  loss: 0.2484  decode.loss_ce: 0.1596  decode.acc_seg: 96.1681  aux.loss_ce: 0.0888  aux.acc_seg: 96.3123
+2023/06/19 09:29:55 - mmengine - INFO - Iter(train) [ 2250/40000]  lr: 9.7492e-03  eta: 6:52:56  time: 0.6514  data_time: 0.0023  memory: 6770  loss: 0.2340  decode.loss_ce: 0.1623  decode.acc_seg: 95.6946  aux.loss_ce: 0.0717  aux.acc_seg: 88.7708
+2023/06/19 09:30:27 - mmengine - INFO - Iter(train) [ 2300/40000]  lr: 9.7436e-03  eta: 6:52:19  time: 0.6511  data_time: 0.0026  memory: 6769  loss: 0.2346  decode.loss_ce: 0.1648  decode.acc_seg: 93.4420  aux.loss_ce: 0.0698  aux.acc_seg: 92.2036
+2023/06/19 09:31:00 - mmengine - INFO - Iter(train) [ 2350/40000]  lr: 9.7380e-03  eta: 6:51:41  time: 0.6504  data_time: 0.0024  memory: 6770  loss: 0.2364  decode.loss_ce: 0.1619  decode.acc_seg: 94.0397  aux.loss_ce: 0.0745  aux.acc_seg: 94.1764
+2023/06/19 09:31:32 - mmengine - INFO - Iter(train) [ 2400/40000]  lr: 9.7324e-03  eta: 6:51:04  time: 0.6501  data_time: 0.0024  memory: 6769  loss: 0.2679  decode.loss_ce: 0.1823  decode.acc_seg: 93.7011  aux.loss_ce: 0.0857  aux.acc_seg: 93.2734
+2023/06/19 09:32:05 - mmengine - INFO - Iter(train) [ 2450/40000]  lr: 9.7268e-03  eta: 6:50:26  time: 0.6501  data_time: 0.0023  memory: 6770  loss: 0.2840  decode.loss_ce: 0.1945  decode.acc_seg: 97.6260  aux.loss_ce: 0.0896  aux.acc_seg: 97.6694
+2023/06/19 09:32:37 - mmengine - INFO - Iter(train) [ 2500/40000]  lr: 9.7212e-03  eta: 6:49:50  time: 0.6509  data_time: 0.0024  memory: 6770  loss: 0.2676  decode.loss_ce: 0.1773  decode.acc_seg: 92.9332  aux.loss_ce: 0.0903  aux.acc_seg: 93.6423
+2023/06/19 09:33:10 - mmengine - INFO - Iter(train) [ 2550/40000]  lr: 9.7156e-03  eta: 6:49:13  time: 0.6494  data_time: 0.0024  memory: 6770  loss: 0.2266  decode.loss_ce: 0.1457  decode.acc_seg: 95.9092  aux.loss_ce: 0.0810  aux.acc_seg: 97.5589
+2023/06/19 09:33:42 - mmengine - INFO - Iter(train) [ 2600/40000]  lr: 9.7101e-03  eta: 6:48:36  time: 0.6496  data_time: 0.0023  memory: 6770  loss: 0.1996  decode.loss_ce: 0.1270  decode.acc_seg: 96.0642  aux.loss_ce: 0.0726  aux.acc_seg: 97.7655
+2023/06/19 09:34:15 - mmengine - INFO - Iter(train) [ 2650/40000]  lr: 9.7045e-03  eta: 6:48:00  time: 0.6494  data_time: 0.0025  memory: 6769  loss: 0.2800  decode.loss_ce: 0.1909  decode.acc_seg: 97.9330  aux.loss_ce: 0.0891  aux.acc_seg: 98.1882
+2023/06/19 09:34:47 - mmengine - INFO - Iter(train) [ 2700/40000]  lr: 9.6989e-03  eta: 6:47:23  time: 0.6506  data_time: 0.0028  memory: 6769  loss: 0.3152  decode.loss_ce: 0.2083  decode.acc_seg: 92.4785  aux.loss_ce: 0.1069  aux.acc_seg: 93.4265
+2023/06/19 09:35:20 - mmengine - INFO - Iter(train) [ 2750/40000]  lr: 9.6933e-03  eta: 6:46:47  time: 0.6504  data_time: 0.0025  memory: 6770  loss: 0.2745  decode.loss_ce: 0.1932  decode.acc_seg: 94.8249  aux.loss_ce: 0.0813  aux.acc_seg: 94.8537
+2023/06/19 09:35:52 - mmengine - INFO - Iter(train) [ 2800/40000]  lr: 9.6877e-03  eta: 6:46:11  time: 0.6499  data_time: 0.0023  memory: 6769  loss: 0.2457  decode.loss_ce: 0.1676  decode.acc_seg: 95.8169  aux.loss_ce: 0.0781  aux.acc_seg: 95.7485
+2023/06/19 09:36:25 - mmengine - INFO - Iter(train) [ 2850/40000]  lr: 9.6821e-03  eta: 6:45:35  time: 0.6501  data_time: 0.0023  memory: 6770  loss: 0.2419  decode.loss_ce: 0.1623  decode.acc_seg: 92.9116  aux.loss_ce: 0.0797  aux.acc_seg: 91.3988
+2023/06/19 09:36:57 - mmengine - INFO - Iter(train) [ 2900/40000]  lr: 9.6765e-03  eta: 6:44:59  time: 0.6495  data_time: 0.0026  memory: 6770  loss: 0.1574  decode.loss_ce: 0.1019  decode.acc_seg: 96.9394  aux.loss_ce: 0.0555  aux.acc_seg: 96.9402
+2023/06/19 09:37:30 - mmengine - INFO - Iter(train) [ 2950/40000]  lr: 9.6709e-03  eta: 6:44:23  time: 0.6499  data_time: 0.0027  memory: 6769  loss: 0.1984  decode.loss_ce: 0.1348  decode.acc_seg: 90.7730  aux.loss_ce: 0.0636  aux.acc_seg: 89.5553
+2023/06/19 09:38:03 - mmengine - INFO - Exp name: pspnet_r50b-d8_4xb2-80k_cityscapes-769x769_20230619_090452
+2023/06/19 09:38:03 - mmengine - INFO - Iter(train) [ 3000/40000]  lr: 9.6653e-03  eta: 6:43:49  time: 0.6570  data_time: 0.0026  memory: 6769  loss: 0.2458  decode.loss_ce: 0.1678  decode.acc_seg: 96.3869  aux.loss_ce: 0.0779  aux.acc_seg: 95.4818
+2023/06/19 09:38:36 - mmengine - INFO - Iter(train) [ 3050/40000]  lr: 9.6598e-03  eta: 6:43:19  time: 0.6595  data_time: 0.0024  memory: 6770  loss: 0.2455  decode.loss_ce: 0.1885  decode.acc_seg: 95.8543  aux.loss_ce: 0.0570  aux.acc_seg: 93.6728
+2023/06/19 09:39:08 - mmengine - INFO - Iter(train) [ 3100/40000]  lr: 9.6542e-03  eta: 6:42:47  time: 0.6554  data_time: 0.0028  memory: 6771  loss: 0.2383  decode.loss_ce: 0.1652  decode.acc_seg: 97.6027  aux.loss_ce: 0.0732  aux.acc_seg: 97.5395
+2023/06/19 09:39:41 - mmengine - INFO - Iter(train) [ 3150/40000]  lr: 9.6486e-03  eta: 6:42:14  time: 0.6557  data_time: 0.0028  memory: 6770  loss: 0.2304  decode.loss_ce: 0.1540  decode.acc_seg: 97.3583  aux.loss_ce: 0.0764  aux.acc_seg: 96.6161
+2023/06/19 09:40:14 - mmengine - INFO - Iter(train) [ 3200/40000]  lr: 9.6430e-03  eta: 6:41:41  time: 0.6572  data_time: 0.0026  memory: 6769  loss: 0.1930  decode.loss_ce: 0.1303  decode.acc_seg: 97.0642  aux.loss_ce: 0.0627  aux.acc_seg: 97.0848
+2023/06/19 09:40:47 - mmengine - INFO - Iter(train) [ 3250/40000]  lr: 9.6374e-03  eta: 6:41:07  time: 0.6513  data_time: 0.0027  memory: 6770  loss: 0.2347  decode.loss_ce: 0.1609  decode.acc_seg: 96.5956  aux.loss_ce: 0.0739  aux.acc_seg: 95.8365
+2023/06/19 09:41:19 - mmengine - INFO - Iter(train) [ 3300/40000]  lr: 9.6318e-03  eta: 6:40:35  time: 0.6559  data_time: 0.0024  memory: 6770  loss: 0.1833  decode.loss_ce: 0.1279  decode.acc_seg: 90.6195  aux.loss_ce: 0.0555  aux.acc_seg: 89.1506
+2023/06/19 09:41:52 - mmengine - INFO - Iter(train) [ 3350/40000]  lr: 9.6262e-03  eta: 6:40:03  time: 0.6563  data_time: 0.0025  memory: 6769  loss: 0.2377  decode.loss_ce: 0.1644  decode.acc_seg: 84.8770  aux.loss_ce: 0.0733  aux.acc_seg: 84.9059
+2023/06/19 09:42:25 - mmengine - INFO - Iter(train) [ 3400/40000]  lr: 9.6206e-03  eta: 6:39:31  time: 0.6646  data_time: 0.0023  memory: 6769  loss: 0.7364  decode.loss_ce: 0.5267  decode.acc_seg: 81.9313  aux.loss_ce: 0.2096  aux.acc_seg: 79.3775
+2023/06/19 09:42:58 - mmengine - INFO - Iter(train) [ 3450/40000]  lr: 9.6150e-03  eta: 6:38:57  time: 0.6500  data_time: 0.0027  memory: 6769  loss: 0.5885  decode.loss_ce: 0.4272  decode.acc_seg: 88.9660  aux.loss_ce: 0.1614  aux.acc_seg: 88.7704
+2023/06/19 09:43:30 - mmengine - INFO - Iter(train) [ 3500/40000]  lr: 9.6094e-03  eta: 6:38:24  time: 0.6504  data_time: 0.0023  memory: 6770  loss: 0.3781  decode.loss_ce: 0.2540  decode.acc_seg: 85.8986  aux.loss_ce: 0.1241  aux.acc_seg: 90.4058
+2023/06/19 09:44:03 - mmengine - INFO - Iter(train) [ 3550/40000]  lr: 9.6038e-03  eta: 6:37:51  time: 0.6541  data_time: 0.0024  memory: 6769  loss: 0.3552  decode.loss_ce: 0.2338  decode.acc_seg: 96.8961  aux.loss_ce: 0.1214  aux.acc_seg: 96.6303
+2023/06/19 09:44:36 - mmengine - INFO - Iter(train) [ 3600/40000]  lr: 9.5982e-03  eta: 6:37:20  time: 0.6561  data_time: 0.0021  memory: 6770  loss: 0.2352  decode.loss_ce: 0.1658  decode.acc_seg: 92.2853  aux.loss_ce: 0.0694  aux.acc_seg: 95.3134
+2023/06/19 09:45:09 - mmengine - INFO - Iter(train) [ 3650/40000]  lr: 9.5926e-03  eta: 6:36:48  time: 0.6564  data_time: 0.0026  memory: 6770  loss: 0.2642  decode.loss_ce: 0.1650  decode.acc_seg: 98.0983  aux.loss_ce: 0.0992  aux.acc_seg: 97.8073
+2023/06/19 09:45:41 - mmengine - INFO - Iter(train) [ 3700/40000]  lr: 9.5870e-03  eta: 6:36:15  time: 0.6525  data_time: 0.0025  memory: 6770  loss: 0.2928  decode.loss_ce: 0.2072  decode.acc_seg: 91.9598  aux.loss_ce: 0.0855  aux.acc_seg: 92.8104
+2023/06/19 09:46:14 - mmengine - INFO - Iter(train) [ 3750/40000]  lr: 9.5815e-03  eta: 6:35:42  time: 0.6564  data_time: 0.0024  memory: 6769  loss: 0.1467  decode.loss_ce: 0.0997  decode.acc_seg: 97.2208  aux.loss_ce: 0.0470  aux.acc_seg: 97.1977
+2023/06/19 09:46:47 - mmengine - INFO - Iter(train) [ 3800/40000]  lr: 9.5759e-03  eta: 6:35:09  time: 0.6537  data_time: 0.0025  memory: 6769  loss: 0.1817  decode.loss_ce: 0.1247  decode.acc_seg: 98.4327  aux.loss_ce: 0.0569  aux.acc_seg: 98.1331
+2023/06/19 09:47:20 - mmengine - INFO - Iter(train) [ 3850/40000]  lr: 9.5703e-03  eta: 6:34:36  time: 0.6603  data_time: 0.0028  memory: 6769  loss: 0.2242  decode.loss_ce: 0.1413  decode.acc_seg: 95.8871  aux.loss_ce: 0.0828  aux.acc_seg: 97.2509
+2023/06/19 09:47:53 - mmengine - INFO - Iter(train) [ 3900/40000]  lr: 9.5647e-03  eta: 6:34:04  time: 0.6688  data_time: 0.0025  memory: 6770  loss: 0.2362  decode.loss_ce: 0.1587  decode.acc_seg: 84.4909  aux.loss_ce: 0.0776  aux.acc_seg: 77.7958
+2023/06/19 09:48:25 - mmengine - INFO - Iter(train) [ 3950/40000]  lr: 9.5591e-03  eta: 6:33:31  time: 0.6552  data_time: 0.0025  memory: 6770  loss: 0.2415  decode.loss_ce: 0.1680  decode.acc_seg: 95.5574  aux.loss_ce: 0.0735  aux.acc_seg: 96.1384
+2023/06/19 09:48:58 - mmengine - INFO - Exp name: pspnet_r50b-d8_4xb2-80k_cityscapes-769x769_20230619_090452
+2023/06/19 09:48:58 - mmengine - INFO - Iter(train) [ 4000/40000]  lr: 9.5535e-03  eta: 6:33:00  time: 0.6577  data_time: 0.0024  memory: 6769  loss: 0.1807  decode.loss_ce: 0.1236  decode.acc_seg: 98.1078  aux.loss_ce: 0.0571  aux.acc_seg: 97.7508
+2023/06/19 09:48:58 - mmengine - INFO - Saving checkpoint at 4000 iterations
+2023/06/19 09:49:08 - mmengine - INFO - per class results:
+2023/06/19 09:49:08 - mmengine - INFO - 
++------------+-------+-------+
+|   Class    |  IoU  |  Acc  |
++------------+-------+-------+
+|    red     | 91.72 | 92.43 |
+|   green    | 90.54 | 99.36 |
+|   white    | 80.96 | 92.83 |
+| seed-black | 76.67 | 87.19 |
+| seed-white | 73.09 | 77.01 |
++------------+-------+-------+
+2023/06/19 09:49:08 - mmengine - INFO - Iter(val) [17/17]  aAcc: 94.1000  mIoU: 82.6000  mAcc: 89.7600  data_time: 0.0012  time: 0.4789
+2023/06/19 09:49:41 - mmengine - INFO - Iter(train) [ 4050/40000]  lr: 9.5479e-03  eta: 6:32:29  time: 0.6548  data_time: 0.0024  memory: 6769  loss: 0.3122  decode.loss_ce: 0.2257  decode.acc_seg: 96.2874  aux.loss_ce: 0.0865  aux.acc_seg: 96.1846
